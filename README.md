@@ -1,0 +1,17 @@
+# Microlearning Project
+
+- Members: Jeeyoung Yoon, Elisee Amegassi, Ian Deal, Shinvanshu Srivastava, Victor Martins, Stephen Chen, Sungjae Cho
+
+## First proposal
+
+Our project is about evaluating the effect that learning rules have on how neural networks internally represent data and how this affects downstream tasks.
+We are particularly interested in evaluating how increasingly biologically plausible learning rules affect these representations.
+
+Towards this goal we will be asking:
+1. Comparing artificial and biology inspired data embedding methods (how models represent data in the initial layer) and measure this affects task performance?
+2. How do different biologically plausible learning rules affect internal representations of a set of models performing the same task? Especially, will a learning rule based on local weight adjustments significantly change what features are represented compared to backprop.
+3. How do networks that are trained with biologically plausible learning rules compare to data collected from human image recognition tasks?
+
+To do this we will be constructing a standard network architecture and training it to perform multiple tasks. For each task, an instance of the model will be trained with each of our selected learning rules and a set of metrics will be computed comparing each instance's representations and task performance.
+
+![image](image/README/workflow-1.png "Workflow-1")
