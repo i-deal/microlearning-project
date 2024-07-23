@@ -11,9 +11,13 @@ $ conda env create -f environment.yml
 To train a model with target_prop call use main.py from terminal:
 
 Fully connected(MLP) layers only:
+```
     py main.py --num_hidden=3 --size_hidden=[256,128,128] --epochs=100 --network_type=DMLPDTP2 --save_loss_plot
+```
 Conv and fully connected layers:
+```
     py main.py --epochs=100 --network_type=DDTPConv --save_loss_plot --initialization=xavier_normal
+```
 
 You will also need to add a --dataset flag:
     for training on standard mnist:
