@@ -20,6 +20,11 @@ import numpy as np
 from lib import utils
 import warnings
 
+if torch.cuda.is_available():
+    device = 'cuda'
+else:
+    device = 'cpu'
+
 class DDTPConvLayer(nn.Module):
     """
     A convolutional layer combined with a pool layer.
@@ -189,6 +194,7 @@ class DDTPConvLayer(nn.Module):
     def backward(self, output_target, layer_activation, output_activation):
         layer_target = self.propagate_backward(output_target)
         layer_tilde = self.propagate_backward(output_activation)
+        #print(layer_target.size(),layer_tilde.size(),layer_activation.size())
 
         return layer_target + layer_activation - layer_tilde
 

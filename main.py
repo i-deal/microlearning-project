@@ -38,7 +38,7 @@ from torch.utils.data import DataLoader
 from lib.train import train, train_bp
 from lib import utils
 from lib import builders
-from tensorboardX import SummaryWriter
+#from tensorboardx import SummaryWriter
 import os.path
 import pickle
 
@@ -60,7 +60,7 @@ def run():
     dgroup = parser.add_argument_group('Dataset options')
     dgroup.add_argument('--dataset', type=str, default='mnist',
                         choices=['mnist', 'student_teacher', 'fashion_mnist',
-                                 'cifar10'],
+                                 'cifar10','PVR'],
                         help='Used dataset for classification/regression. '
                              'Default: %(default)s.')
     dgroup.add_argument('--num_train', type=int, default=1000,
@@ -429,6 +429,10 @@ def run():
                        args.save_GN_angle or \
                        args.save_GNT_angle
     print(args)
+    if not args.no_cuda:
+        args.device='cuda'
+    else:
+        args.device ='cpu'
 
     ### Create summary log writer
     curdir = os.path.curdir
@@ -444,7 +448,7 @@ def run():
     with open(os.path.join(out_dir, 'args.txt'), 'w') as f:
         json.dump(args.__dict__, f, indent=2)
 
-    if args.dataset in ['mnist', 'fashion_mnist', 'cifar10']:
+    if args.dataset in ['mnist', 'fashion_mnist', 'cifar10','PVR']:
         args.classification = True
     else:
         args.classification = False
@@ -527,6 +531,8 @@ def run():
         args.direct_fb = True
     else:
         args.direct_fb = False
+    
+    args.conv_dim1 = 256*4*4
 
     if ',' in args.gn_damping:
         args.gn_damping = utils.str_to_list(args.gn_damping, type='float')
@@ -557,8 +563,8 @@ def run():
 
     use_cuda = (not args.no_cuda) and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-    if use_cuda:
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    #if use_cuda:
+        #torch.set_default_tensor_type('torch.cuda.FloatTensor')
     print('Using cuda: ' + str(use_cuda))
 
     if args.double_precision:
@@ -575,7 +581,7 @@ def run():
             data_dir = '../../../../data'
         else:
             data_dir = './data'
-
+        args.size_input = 28**2
         if args.no_preprocessing_mnist:
             transform = transforms.Compose([
                 transforms.ToTensor()])
@@ -608,6 +614,65 @@ def run():
         test_loader = torch.utils.data.DataLoader(testset,
                                                   batch_size=args.batch_size,
                                                   shuffle=False, num_workers=0)
+
+    elif args.dataset == 'PVR':
+        print('### Training on PVR task with MNIST ###')
+        if args.multiple_hpsearch:
+            data_dir = '../../../../../data'
+        elif args.hpsearch:
+            data_dir = '../../../../data'
+        else:
+            data_dir = './data'
+        
+        args.size_input = 56**2
+        args.size_output = 10
+        args.conv_dim1 = 56*56*4
+
+        if args.no_preprocessing_mnist:
+            transform = transforms.Compose([
+                transforms.ToTensor()])
+        else:
+            transform = transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))])
+        trainset_total = utils.MNIST(root=data_dir, train=True,
+                                              download=True,
+                                              transform=transform)
+
+        if args.no_val_set:
+            train_loader = torch.utils.data.DataLoader(trainset_total,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=0)
+            val_loader = None
+        else:
+            trainset, valset = torch.utils.data.random_split(trainset_total,
+                                                             [55000, 5000])
+            train_loader = torch.utils.data.DataLoader(trainset,
+                                                      batch_size=args.batch_size,
+                                                      shuffle=True, num_workers=0)
+            val_loader = None
+        testset = torchvision.datasets.MNIST(root=data_dir, train=False,
+                                             download=True,
+                                             transform=transform)
+        datasets = utils.MNISTDatasets(trainset_total, testset)
+        trainset_total, valid_dset = datasets.get_train_validation_split(50000)
+        block_dset, labels = datasets.construct_block_dataset(trainset_total.dataset,
+                                                      trainset_total.labels)
+        block_test, labels_test = datasets.construct_block_dataset(valid_dset.dataset,
+                                                      trainset_total.labels)
+        block_dset = utils.MNISTDataset(block_dset, labels)
+        block_test = utils.MNISTDataset(block_test, labels_test)
+        train_loader = torch.utils.data.DataLoader(block_dset,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=0)
+        
+        test_loader = torch.utils.data.DataLoader(block_test,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=0)
+        val_loader = test_loader
 
     elif args.dataset == 'fashion_mnist':
         print('### Training on Fashion-MNIST ###')
@@ -717,7 +782,7 @@ def run():
     if args.log_interval is None:
         args.log_interval = max(1, int(len(train_loader)/100))
         # 100 logpoint per epoch
-
+    print(args.dataset)
 
     if args.save_logs:
         writer = SummaryWriter(logdir=out_dir)

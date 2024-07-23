@@ -21,9 +21,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from tensorboardX import SummaryWriter
+#from tensorboardX import SummaryWriter
 import lib.utils as utils
 import warnings
+
+if torch.cuda.is_available():
+    device = 'cuda'
+else:
+    device = 'cpu'
 
 class DTPLayer(nn.Module):
     """ An abstract base class for a layer of an MLP that will be trained by the
@@ -89,9 +94,9 @@ class DTPLayer(nn.Module):
 
     def __init__(self, in_features, out_features, bias=True,
                  forward_requires_grad=False, forward_activation='tanh',
-                 feedback_activation='tanh', initialization='orthogonal'):
+                 feedback_activation='tanh', initialization='orthogonal',device=device):
         nn.Module.__init__(self)
-
+        self.device = device
         self._weights = nn.Parameter(torch.Tensor(out_features, in_features),
                                      requires_grad=forward_requires_grad)
         self._feedbackweights = nn.Parameter(torch.Tensor(in_features,
@@ -301,9 +306,9 @@ class DTPLayer(nn.Module):
             The mini-batch of output activations of the layer.
         """
 
-        h = x.mm(self.weights.t())
+        h = x.mm(self.weights.t().to(self.device))
         if self.bias is not None:
-            h += self.bias.unsqueeze(0).expand_as(h)
+            h += self.bias.unsqueeze(0).expand_as(h).to(self.device)
         self.linearactivations = h
 
         self.activations = self.forward_activationfunction(h)
@@ -312,9 +317,9 @@ class DTPLayer(nn.Module):
     def dummy_forward(self, x):
         """ Same as the forward method, besides that the activations and
         linear activations are not saved in self."""
-        h = x.mm(self.weights.t())
+        h = x.mm(self.weights.t().to(self.device))
         if self.bias is not None:
-            h += self.bias.unsqueeze(0).expand_as(h)
+            h += self.bias.unsqueeze(0).expand_as(h).to(self.device)
         h = self.forward_activationfunction(h)
         return h
 
@@ -322,9 +327,9 @@ class DTPLayer(nn.Module):
         """ Propagate the input of the layer forward to the linear activation
         of the current layer (so no nonlinearity applied), without saving the
         linear activations."""
-        a = x.mm(self.weights.t())
+        a = x.mm(self.weights.t().to(self.device))
         if self.bias is not None:
-            a += self.bias.unsqueeze(0).expand_as(a)
+            a += self.bias.unsqueeze(0).expand_as(a).to(self.device)
 
         return a
 
@@ -334,9 +339,9 @@ class DTPLayer(nn.Module):
         Args:
             h (torch.Tensor): a mini-batch of activations
         """
-        h = h.mm(self.feedbackweights.t())
+        h = h.mm(self.feedbackweights.t().to(self.device))
         if self.feedbackbias is not None:
-            h += self.feedbackbias.unsqueeze(0).expand_as(h)
+            h += self.feedbackbias.unsqueeze(0).expand_as(h).to(self.device)
         return self.feedback_activationfunction(h)
 
 
@@ -383,12 +388,18 @@ class DTPLayer(nn.Module):
             teaching_signal = 2 * vectorized_jacobians * (
                     self.activations - h_target)
         batch_size = h_target.shape[0]
-        bias_grad = teaching_signal.mean(0)
+        bias_grad = teaching_signal.mean(0).to(self.device)
         weights_grad = 1./batch_size * teaching_signal.t().mm(h_previous)
 
+        temp_device = self.device
         if self.bias is not None:
-            self._bias.grad = bias_grad.detach()
-        self._weights.grad = weights_grad.detach()
+            if self.bias.get_device() == -1:
+                temp_device = 'cpu'
+                
+            self._bias.grad = bias_grad.detach().to(temp_device)
+            self._bias.grad.to(self.device)
+        self._weights.grad = weights_grad.detach().to(temp_device)
+        self._weights.grad.to(self.device)
 
     def set_feedback_requires_grad(self, value):
         """

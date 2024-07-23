@@ -26,15 +26,15 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from tensorboardX import SummaryWriter
+#from tensorboardx import SummaryWriter
 import pandas as pd
 
 from lib import utils
-from lib.networks import LeeDTPNetwork, DTPNetwork
+#from lib.networks import LeeDTPNetwork, DTPNetwork
 import pickle
 
 def train(args, device, train_loader, net, writer, test_loader, summary,
-          val_loader):
+          val_loader, labels=None):
     """
     Train the given network on the given training dataset with DTP.
     Args:
@@ -53,6 +53,7 @@ def train(args, device, train_loader, net, writer, test_loader, summary,
     print('Training network ...')
     net.train()
     if args.save_weights:
+        print('saving weights')
         forward_parameters = net.get_forward_parameter_list()
         filename = os.path.join(args.out_dir, 'weights.pickle')
         with open(filename, 'wb') as f:
@@ -249,8 +250,8 @@ def train(args, device, train_loader, net, writer, test_loader, summary,
                 if train_var.epoch_accuracy < 0.4:
                     # error code to indicate pruned run
                     print('writing error code -1')
-                    train_var.summary['finished'] = -1
-                    break
+                    #train_var.summary['finished'] = -1
+                    #break
             if args.dataset in ['cifar10']:
                 if train_var.epoch_accuracy < 0.25:
                     # error code to indicate pruned run
@@ -356,7 +357,7 @@ def train_parallel(args, train_var, device, train_loader, net, writer):
         predictions = net.forward(inputs)
         if args.classification and args.output_activation == 'sigmoid':
             # convert targets to one hot vectors for MSE loss:
-            targets = utils.int_to_one_hot(targets, 10, device,
+            targets = utils.int_to_one_hot(targets, args.size_output, device,
                                            soft_target=args.soft_target)
 
         train_var.batch_accuracy, train_var.batch_loss = \
@@ -513,6 +514,7 @@ def train_forward_parameters(args, net, predictions, targets, loss_function,
     save_target = args.save_GN_activations_angle or \
                   args.save_BP_activations_angle
 
+    targets.to(args.device)
     forward_optimizer.zero_grad()
     loss = loss_function(predictions, targets)
     if not args.train_randomized:
@@ -548,7 +550,10 @@ def train_feedback_parameters(args, net, feedback_optimizer):
             k = np.random.randint(1, net.depth)
             net.compute_feedback_gradients(k)
     elif args.direct_fb:
+        x=1
         if not args.train_randomized_fb:
+            if args.network_type == 'DDTPConv':
+                x=2
             for k in range(0, net.depth-1):
                 net.compute_feedback_gradients(k)
         else:
@@ -571,6 +576,7 @@ def test(args, device, net, test_loader, loss_function):
         - Test accuracy
         - Test loss
     """
+    #print(type(net))
     loss = 0
     if args.classification:
         accuracy = 0

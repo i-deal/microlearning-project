@@ -29,7 +29,10 @@ import pandas as pd
 import warnings
 from lib import utils
 
-
+if torch.cuda.is_available():
+    device = 'cuda'
+else:
+    device = 'cpu'
 
 class DDTPRHLNetwork(DTPDRLNetwork):
     """
@@ -506,7 +509,7 @@ class DDTPMLPNetwork(DDTPRHLNetwork):
                  output_activation='linear', bias=True, sigma=0.36,
                  forward_requires_grad=False, size_hidden_fb=[100],
                  fb_hidden_activation='tanh', initialization='orthogonal',
-                 fb_activation='linear', plots=None, recurrent_input=False
+                 fb_activation='linear', plots=None, recurrent_input=False, device =device
                  ):
         nn.Module.__init__(self)
 
@@ -515,12 +518,13 @@ class DDTPMLPNetwork(DDTPRHLNetwork):
                                        activation, output_activation,
                    bias, forward_requires_grad, size_hidden_fb,
                    initialization, fb_activation, fb_hidden_activation,
-                                       recurrent_input)
+                                       recurrent_input).to(device)
         self._input = None
         self._sigma = sigma
         self._forward_requires_grad = forward_requires_grad
         self._plots = plots
         self.update_idx = None
+        self.device = device
         if plots is not None:
             self.bp_angles = pd.DataFrame(
                 columns=[i for i in range(0, self._depth)])
@@ -550,7 +554,7 @@ class DDTPMLPNetwork(DDTPRHLNetwork):
     def set_layers(self, n_in, n_hidden, n_out, activation, output_activation,
                    bias, forward_requires_grad, size_hidden_fb,
                    initialization, fb_activation, fb_hidden_activation,
-                   recurrent_input):
+                   recurrent_input, device='cuda'):
         n_all = [n_in] + n_hidden + [n_out]
         layers = nn.ModuleList()
         for i in range(1, len(n_all) - 1):
@@ -572,7 +576,7 @@ class DDTPMLPNetwork(DDTPRHLNetwork):
                              fb_hidden_activation=fb_hidden_activation,
                              initialization=initialization,
                              recurrent_input=recurrent_input_copy
-                             )
+                             ).to(device)
             )
         layers.append(
             DDTPMLPLayer(n_all[-2], n_all[-1], n_out,
@@ -584,7 +588,7 @@ class DDTPMLPNetwork(DDTPRHLNetwork):
                          fb_hidden_activation=fb_hidden_activation,
                          initialization=initialization,
                          is_output=True
-                         )
+                         ).to(device)
         )
         return layers
 

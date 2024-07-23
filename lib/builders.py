@@ -237,6 +237,8 @@ def build_network(args):
                                            feedback_activation=args.fb_activation,
                                            initialization=args.initialization,
                                            sigma=args.sigma,
+                                           hidden_dim1= args.conv_dim1,
+                                           img_dim = int(args.size_input**(1/2)),
                                            plots=args.plots,
                                            forward_requires_grad=forward_requires_grad)
     elif args.network_type == 'DDTPConvCIFAR':

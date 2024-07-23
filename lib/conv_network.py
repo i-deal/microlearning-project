@@ -23,57 +23,68 @@ import torch.nn.functional as F
 from lib import utils
 import pandas as pd
 
+if torch.cuda.is_available():
+    device = 'cuda'
+else:
+    device = 'cpu'
+
 class DDTPConvNetwork(nn.Module):
     def __init__(self, bias=True, hidden_activation='tanh',
                  feedback_activation='linear', initialization='xavier_normal',
-                 sigma=0.1, plots=None, forward_requires_grad=False):
+                 sigma=0.1, hidden_dim1=4096, img_dim=28**2, plots=None, forward_requires_grad=False, device=device):
         nn.Module.__init__(self)
-        l1 = DDTPConvLayer(3, 96, (5, 5), 10, [96, 16, 16],
+        self.device = device
+        if img_dim == 28:
+            last_dim = 4
+        else:
+            last_dim = (img_dim+1)//8
+        l1 = DDTPConvLayer(1, 96, (5, 5), 10, [96, (img_dim)//2, (img_dim)//2],
                            stride=1, padding=2, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
                            pool_type='max', pool_kernel_size=(3, 3),
                            pool_stride=(2, 2), pool_padding=1, pool_dilation=1,
                            forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)
-        l2 = DDTPConvLayer(96, 128, (5, 5), 10, [128, 8, 8],
+                           feedback_activation=feedback_activation).to(device)
+        l2 = DDTPConvLayer(96, 128, (5, 5), 10, [128, (img_dim)//4, (img_dim)//4],
                            stride=1, padding=2, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
                            pool_type='max', pool_kernel_size=(3, 3),
                            pool_stride=(2, 2), pool_padding=1, pool_dilation=1,
                            forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)
-        l3 = DDTPConvLayer(128, 256, (5, 5), 10, [256, 4, 4],
+                           feedback_activation=feedback_activation).to(device)
+        l3 = DDTPConvLayer(128, 256, (5, 5), 10, [256, last_dim, last_dim],
                            stride=1, padding=2, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
                            pool_type='max', pool_kernel_size=(3, 3),
                            pool_stride=(2, 2), pool_padding=1, pool_dilation=1,
                            forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)
-        l4 = DDTPMLPLayer(4 * 4 * 256, 2048, 10, bias=True,
+                           feedback_activation=feedback_activation).to(device)
+        l4 = DDTPMLPLayer(hidden_dim1, 2048, 10, bias=True,
                           forward_requires_grad=forward_requires_grad,
                           forward_activation=hidden_activation,
                           feedback_activation=feedback_activation,
                           size_hidden_fb=None, initialization=initialization,
                           is_output=False,
-                          recurrent_input=False)
+                          recurrent_input=False).to(device)
         l5 = DDTPMLPLayer(2048, 2048, 10, bias=True,
                           forward_requires_grad=forward_requires_grad,
                           forward_activation=hidden_activation,
                           feedback_activation=feedback_activation,
                           size_hidden_fb=None, initialization=initialization,
                           is_output=False,
-                          recurrent_input=False)
+                          recurrent_input=False).to(device)
         l6 = DDTPMLPLayer(2048, 10, 10, bias=True,
                           forward_requires_grad=forward_requires_grad,
                           forward_activation='linear',
                           feedback_activation=feedback_activation,
                           size_hidden_fb=None, initialization=initialization,
                           is_output=True,
-                          recurrent_input=False)
-        self._layers = nn.ModuleList([l1, l2, l3, l4, l5, l6])
+                          recurrent_input=False).to(device)
+        self._layers = nn.ModuleList([l1, l2, l3, l4, l5, l6]).to(device)
+        #self._layers = nn.ModuleList([l1, l2, l3, l4, l6]).to(device)
         self._depth = 6
         self.nb_conv = 3
         self._input = None
@@ -134,6 +145,7 @@ class DDTPConvNetwork(nn.Module):
     def forward(self, x):
         self.input = x
         y = x
+        y= y.view(-1,1,y.size(2),y.size(2))
         for i, layer in enumerate(self.layers):
             if i == self.nb_conv: # flatten conv layer
                 y = y.view(y.shape[0], -1)

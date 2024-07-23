@@ -23,7 +23,7 @@ import numpy as np
 import warnings
 from lib.dtp_layers import DTPLayer
 from lib.dtpdrl_layers import DTPDRLLayer
-from tensorboardX import SummaryWriter
+#from tensorboardX import SummaryWriter
 import lib.utils as utils
 from lib.utils import NetworkError
 import pandas as pd
@@ -1280,13 +1280,14 @@ class BPNetwork(nn.Module):
 
     def __init__(self, n_in, n_hidden, n_out, activation='relu',
                  output_activation='linear', bias=True,
-                 initialization='orthogonal'):
+                 initialization='orthogonal',device='cuda'):
         super().__init__()
         if n_hidden is None:
             n_all = [n_in, n_out]
         else:
             n_all = [n_in] + n_hidden + [n_out]
-        self.layers = nn.ModuleList()
+        self.device = device
+        self.layers = nn.ModuleList().to(device)
         for i in range(1, len(n_all)):
             layer = nn.Linear(n_all[i-1], n_all[i], bias=bias)
             if initialization == 'orthogonal':
@@ -1304,7 +1305,8 @@ class BPNetwork(nn.Module):
             if bias:
                 nn.init.constant_(layer.bias, 0)
 
-            self.layers.append(layer)
+            self.layers.append(layer.to(device))
+        self.layers.to(device)
         self.activation = activation
         self.output_activation = output_activation
 
@@ -1326,7 +1328,7 @@ class BPNetwork(nn.Module):
 
     def forward(self, x):
         for layer in self.layers[:-1]:
-            x = layer(x)
+            x = layer(x.to(self.device))
             x = self.nonlinearity(x, self.activation)
 
         x = self.layers[-1](x)

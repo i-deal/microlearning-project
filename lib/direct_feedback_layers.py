@@ -92,7 +92,7 @@ class DDTPRHLLayer(DTPDRLLayer):
                  forward_requires_grad=False, forward_activation='tanh',
                  feedback_activation='tanh', hidden_feedback_dimension=500,
                  initialization='orthogonal',
-                 recurrent_input = False):
+                 recurrent_input = False, device = 'cuda'):
         # Warning: if the __init__ method of DTPLayer gets new/extra arguments,
         # this should also be incorporated here
         super().__init__(in_features=in_features,
@@ -104,6 +104,7 @@ class DDTPRHLLayer(DTPDRLLayer):
                          initialization=initialization)
 
         self._recurrent_input = recurrent_input
+        self.device = device
         # Now we need to overwrite the initialization of the feedback weights,
         # as we now need Q_i instead of Q_{i-1}, and a direct connection from
         # the hidden feedback layer to hi
@@ -314,7 +315,7 @@ class DDTPMLPLayer(DTPDRLLayer):
             in_tensor = torch.cat((output_target, self.activations), dim=1)
         else:
             in_tensor = output_target
-        h = self._fb_mlp(in_tensor)
+        h = self._fb_mlp(in_tensor.to(self.device))
         return h
 
     def backward(self, output_target, h_current, output_activation):
