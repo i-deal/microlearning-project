@@ -48,3 +48,22 @@ class Net(nn.Module):
         output = F.log_softmax(x, dim=1)
         return output
 ```
+
+## Progress report for NeuroAI
+
+Our project aims to compare the backpropagation learning rule with more biologically plausible learning rules in terms of their mechanism, performance, and internal representations. Our progress and next steps are as follows:
+
+The **deep predictive coding network** (Wen et al., 2018) has been employed from the authors’ GitHub repository. The implementation has been adapted to the newest PyTorch version and the MNIST and CIFAR-10 datasets of our interest. The network achieved 99% test accuracy for MNIST and 95% for CIFAR-10. Further analysis on the representations of each layer is to be continued.
+
+The **direct difference target propagation learning rule** (Meulemans et al., 2020) has been implemented in the standard convolutional network and trained on MNIST, RDM’s and dimensionality reduction based metrics have been computed to compare the the learning rule’s effect on the internal representations within the model compared to backpropagation.
+
+The **non-negative matrix factorization** (Seung & Lee, 1999) has been implemented on the MNIST dataset. This feature representation was compared with that of a CNN trained with backpropagation. Further analysis on the CIFAR-10 dataset will be conducted to compare the resemblance of these two approaches with the biological visual system's stimuli representation.
+
+The **Kolen-Pollack approach** (Kolen & Pollack, 1994) updates forward and backward weights using only locally available information. Neuromatch tutorials implemented this approach in a single fully connected layer, and we extended it to multiple layers. Then we compared the representational geometries from this method to those in neural networks trained with error backpropagation, weight mirror, and feedback alignment learning rules. Going forward we aim to further extend our modeling capabilities with it to convolutional layers.
+
+### References
+
+1. Wen, H., Han, K., Shi, J., Zhang, Y., Culurciello, E., & Liu, Z. (2018). Deep predictive coding network for object recognition. International Conference on Machine Learning.
+2. Ernoult, M., Normandin, F., Moudgil, A., Spinney, S., Belilovsky, E., Rish, I., Richards, B.A., & Bengio, Y. (2022). Towards scaling difference target propagation by learning backprop targets. International Conference on Machine Learning.
+3. Lee, D., & Seung, H.S. (1999). Learning the parts of objects by non-negative matrix factorization. Nature.
+4. Kolen, J.F., & Pollack, J.B. (1994). Backpropagation without weight transport. Proceedings of 1994 IEEE International Conference on Neural Networks.
