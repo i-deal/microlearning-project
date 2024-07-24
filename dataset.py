@@ -3,6 +3,7 @@ import torchvision
 
 def load_dataset(dataset, batch_size):
     if dataset == 'MNIST':
+        # Reference: https://neuroai.neuromatch.io/tutorials/W1D2_ComparingTasks/student/W1D2_Tutorial1.html
         mnist_transforms = torchvision.transforms.Compose([
             torchvision.transforms.ToTensor(),  # Convert images to tensor
             torchvision.transforms.Normalize((0.1307,), (0.3081,))  # Normalize the images with mean and standard deviation
