@@ -11,6 +11,30 @@ from torchvision import transforms
 from torchvision.datasets.mnist import MNIST
 
 
+mnist_raw_transform = transforms.Compose([
+    # transforms.Resize((32, 32)),  # Resize the images to 32x32 pixels
+    transforms.ToTensor(),  # Convert images to PyTorch tensors
+    transforms.Normalize(mean=(0.1307,), std=(0.3081,))  # Normalize the images with mean and standard deviation
+])
+
+class MNISTDataset(Dataset):
+    def __init__(self, dset: torch.tensor, labels: torch.tensor):
+        self.dset, self.labels = dset, labels
+
+    def __len__(self):
+        return len(self.dset)
+
+    def __getitem__(self, idx: int):
+        return self.dset[idx].float().unsqueeze(0), self.labels[idx]
+
+    def transform_raw(self):
+        return transforms.Compose([
+            # transforms.Resize((32, 32)),  # Resize the images to 32x32 pixels
+            transforms.ToTensor(),  # Convert images to PyTorch tensors
+            transforms.Normalize(mean=(0.1307,), std=(0.3081,))  # Normalize the images with mean and standard deviation
+        ])
+
+
 class MNISTDatasets:
     """Manages Torch Datasets for training, validation, testing for various tasks."""
 
@@ -52,7 +76,7 @@ class MNISTDatasets:
         return splits
 
     def construct_block_dataset(self, dset: torch.tensor, labels: torch.tensor,
-                                n_samples=None, dist_shift=False) -> tuple[torch.tensor, torch.tensor]:
+                                n_samples=None, dist_shift=False) -> MNISTDataset:
         """Constructs 2x2 MNIST block and corresponding label for PVR task."""
         num_regions = 4
         dset_size = dset.size(0)
@@ -86,18 +110,7 @@ class MNISTDatasets:
             labels[BL_mask] = BL.Y[BL_mask]
             labels[BR_mask] = BR.Y[BR_mask]
 
-        return grid, labels
-
-
-class MNISTDataset(Dataset):
-    def __init__(self, dset: torch.tensor, labels: torch.tensor):
-        self.dset, self.labels = dset, labels
-
-    def __len__(self):
-        return len(self.dset)
-
-    def __getitem__(self, idx: int):
-        return self.dset[idx], self.labels[idx]
+        return MNISTDataset(grid, labels)
 
 
 class MNISTPaired(IterableDataset):
@@ -123,6 +136,7 @@ class MNISTDoublePaired(IterableDataset):
 
     def __iter__(self):
         return iter(zip(self.pairs1, self.pairs2))
+
 
 
 if __name__ == "__main__":
