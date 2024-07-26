@@ -21,6 +21,7 @@ import numpy as np
 from numpy import prod
 
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import Subset
 
 from networks.conv import ConvNetwork
 from utils.multioptimizer import MultipleOptimizer
@@ -149,10 +150,16 @@ def main():
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     train_data = datasets.CIFAR10(root='/home/vfranco-/nmanai/dkp-gist/data', train=True, download=True, transform=transform)
-    train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, **kwargs)
+    num_samples = int(len(train_data) * 0.1)
+    subset_indices = np.random.choice(len(train_data), num_samples, replace=False)
+    train_subset = Subset(train_data, subset_indices)
+    train_loader = torch.utils.data.DataLoader(train_subset, shuffle=True, **kwargs)
 
     test_data = datasets.CIFAR10(root='/home/vfranco-/nmanai/dkp-gist/data', train=False, download=True, transform=transform)
-    test_loader = torch.utils.data.DataLoader(test_data, shuffle=False, **kwargs)
+    num_samples = int(len(test_data) * 0.1)
+    subset_indices = np.random.choice(len(test_data), num_samples, replace=False)
+    test_subset = Subset(test_data, subset_indices)
+    test_loader = torch.utils.data.DataLoader(test_subset, shuffle=False, **kwargs)
 
     model = ConvNetwork(args.batch_size, args.train_mode, device).to(device)
 
@@ -191,6 +198,8 @@ def main():
 
     if args.save_model:
         torch.save(model.state_dict(), "cifar10_conv.pt")
+
+    torch.save(model, "cifar10_conv_entire.pt")
 
 
 if __name__ == '__main__':
