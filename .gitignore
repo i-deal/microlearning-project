@@ -1,0 +1,3 @@
+dkp/data/*
+dkp/networks/__pycache__/
+dkp/utils/__pycache__/
