@@ -149,13 +149,13 @@ def main():
 
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    train_data = datasets.CIFAR10(root='/home/vfranco-/nmanai/dkp-gist/data', train=True, download=True, transform=transform)
+    train_data = datasets.CIFAR10(root='data', train=True, download=True, transform=transform)
     num_samples = int(len(train_data) * 0.1)
     subset_indices = np.random.choice(len(train_data), num_samples, replace=False)
     train_subset = Subset(train_data, subset_indices)
     train_loader = torch.utils.data.DataLoader(train_subset, shuffle=True, **kwargs)
 
-    test_data = datasets.CIFAR10(root='/home/vfranco-/nmanai/dkp-gist/data', train=False, download=True, transform=transform)
+    test_data = datasets.CIFAR10(root='data', train=False, download=True, transform=transform)
     num_samples = int(len(test_data) * 0.1)
     subset_indices = np.random.choice(len(test_data), num_samples, replace=False)
     test_subset = Subset(test_data, subset_indices)
@@ -163,7 +163,7 @@ def main():
 
     model = ConvNetwork(args.batch_size, args.train_mode, device).to(device)
 
-    writer = SummaryWriter(log_dir='/home/vfranco-/nmanai/dkp-gist/results/conv_dkp_4')
+    writer = SummaryWriter(log_dir='results/conv_dkp_4')
     logger = CSVLogger(['Epoch', 'Training Loss', 'Test Loss', 'Test Accuracy'], args)
 
     if args.train_mode == 'DKP':
